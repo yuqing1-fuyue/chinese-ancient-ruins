@@ -1,0 +1,4 @@
+  File "C:\Users\������\Desktop\�л���ַ�Ǽ�\apply_images.py", line 114
+    content = content[:m.start(1)] + f'"{city}": [{block}]{content[m.end(1):}']
+                                                                            ^
+SyntaxError: closing parenthesis '}' does not match opening parenthesis '['

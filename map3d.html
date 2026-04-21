@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>中华古址智鉴 · 遗址分布图</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        :root {
+            --primary: #7B2D00;
+            --primary-dark: #5C1E00;
+            --gold: #B8860B;
+            --gold-light: #E8C068;
+            --bg: #F5EDE0;
+            --bg-dark: #EAD9C0;
+            --text: #2C1A0E;
+            --text-muted: #7A5C3E;
+            --border: #C4A06E;
+            --card-bg: rgba(255, 252, 245, 0.97);
+            --shadow: 0 8px 32px rgba(123,45,0,0.2);
+            --radius: 16px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; overflow: hidden; }
+        body { font-family: 'Microsoft YaHei','PingFang SC','Noto Serif SC',serif; background: var(--bg); color: var(--text); }
+
+        /* ===== 沉浸式动态背景 ===== */
+        .immersive-bg {
+            position: fixed; inset: 0; z-index: 0;
+            background: linear-gradient(135deg, #1A0800 0%, #2D1200 25%, #4A2000 50%, #2D1200 75%, #1A0800 100%);
+            overflow: hidden;
+        }
+        .immersive-bg::before {
+            content: '';
+            position: absolute; inset: 0;
+            background: 
+                radial-gradient(ellipse 80% 50% at 20% 40%, rgba(123,45,0,0.3) 0%, transparent 50%),
+                radial-gradient(ellipse 60% 40% at 80% 60%, rgba(184,134,11,0.15) 0%, transparent 50%),
+                radial-gradient(ellipse 100% 80% at 50% 100%, rgba(123,45,0,0.4) 0%, transparent 40%);
+            animation: bgPulse 8s ease-in-out infinite;
+        }
+        @keyframes bgPulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.05); }
+        }
+
+        /* 云纹装饰层 */
+        .cloud-pattern {
+            position: absolute; inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg width='200' height='200' viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23B8860B' stroke-opacity='0.06' stroke-width='0.5'%3E%3Cpath d='M20 100 Q50 70 80 100 Q110 130 140 100 Q170 70 200 100'/%3E%3Cpath d='M-20 130 Q10 100 40 130 Q70 160 100 130 Q130 100 160 130'/%3E%3Cpath d='M20 70 Q50 40 80 70 Q110 100 140 70 Q170 40 200 70'/%3E%3Cpath d='M20 160 Q50 130 80 160 Q110 190 140 160'/%3E%3C/g%3E%3C/svg%3E");
+            background-size: 200px 200px;
+            animation: cloudDrift 60s linear infinite;
+            opacity: 0.5;
+        }
+        @keyframes cloudDrift {
+            from { background-position: 0 0; }
+            to { background-position: 400px 0; }
+        }
+
+        /* 星光粒子 */
+        .particles {
+            position: absolute; inset: 0;
+            background-image: 
+                radial-gradient(1px 1px at 10% 20%, rgba(232,192,104,0.4) 0%, transparent 100%),
+                radial-gradient(1px 1px at 30% 60%, rgba(232,192,104,0.3) 0%, transparent 100%),
+                radial-gradient(1.5px 1.5px at 50% 30%, rgba(232,192,104,0.5) 0%, transparent 100%),
+                radial-gradient(1px 1px at 70% 70%, rgba(232,192,104,0.3) 0%, transparent 100%),
+                radial-gradient(1px 1px at 90% 40%, rgba(232,192,104,0.4) 0%, transparent 100%),
+                radial-gradient(1.5px 1.5px at 15% 80%, rgba(232,192,104,0.35) 0%, transparent 100%),
+                radial-gradient(1px 1px at 85% 15%, rgba(232,192,104,0.45) 0%, transparent 100%),
+                radial-gradient(1px 1px at 45% 90%, rgba(232,192,104,0.3) 0%, transparent 100%);
+            animation: twinkle 4s ease-in-out infinite;
+        }
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-dark); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+        .top-bar {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+            height: 64px;
+            background: linear-gradient(180deg,#2A0F00 0%,#7B2D00 60%,#9B3D10 100%);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 24px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+            border-bottom: 2px solid var(--gold);
+        }
+        .top-bar::after {
+            content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg,transparent,var(--gold-light),transparent);
+        }
+        .brand { display: flex; align-items: center; gap: 12px; }
+        .brand-icon {
+            width: 38px; height: 38px; background: var(--gold); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-size: 18px;
+            box-shadow: 0 0 12px rgba(184,134,11,0.5);
+            animation: iconPulse 3s ease-in-out infinite;
+        }
+        @keyframes iconPulse {
+            0%, 100% { box-shadow: 0 0 12px rgba(184,134,11,0.5); transform: scale(1); }
+            50% { box-shadow: 0 0 20px rgba(184,134,11,0.8); transform: scale(1.05); }
+        }
+        .brand-text h1 { font-size: 17px; color: var(--gold-light); letter-spacing: 3px; font-weight: 700; }
+        .brand-text span { font-size: 10px; color: rgba(232,192,104,0.6); letter-spacing: 2px; }
+
+        .top-center { display: flex; gap: 6px; align-items: center; overflow-x: auto; max-width: 55vw; }
+        .top-center::-webkit-scrollbar { display: none; }
+        .dyna-btn {
+            padding: 5px 13px; border-radius: 20px; font-size: 12px;
+            background: rgba(255,255,255,0.07); border: 1px solid rgba(184,134,11,0.3);
+            color: #E8D5A3; cursor: pointer; transition: all 0.3s; font-family: inherit; white-space: nowrap; flex-shrink: 0;
+        }
+        .dyna-btn:hover { background: rgba(184,134,11,0.2); border-color: var(--gold); transform: translateY(-2px); }
+        .dyna-btn.active { background: var(--gold); color: #2A0F00; font-weight: 700; box-shadow: 0 0 10px rgba(184,134,11,0.5); }
+
+        .top-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+        .stat-bar { color: var(--gold-light); font-size: 12px; background: rgba(255,255,255,0.08); border: 1px solid rgba(184,134,11,0.3); border-radius: 20px; padding: 5px 14px; }
+        .back-link { padding: 7px 18px; background: var(--gold); color: #2A0F00; border: none; border-radius: 20px; font-size: 12px; font-weight: 700; cursor: pointer; text-decoration: none; letter-spacing: 1px; transition: all 0.3s; font-family: inherit; display: inline-block; }
+        .back-link:hover { background: var(--gold-light); box-shadow: 0 0 15px rgba(184,134,11,0.5); transform: scale(1.05); }
+
+        /* 搜索框样式 */
+        .search-box {
+            display: flex; align-items: center; gap: 6px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(184,134,11,0.3);
+            border-radius: 20px; padding: 4px 8px;
+        }
+        .search-field {
+            background: transparent; border: none; outline: none;
+            color: #F5E8C0; font-size: 12px; width: 140px;
+            font-family: inherit; padding: 3px 6px;
+        }
+        .search-field::placeholder { color: rgba(232,192,104,0.6); }
+        .search-field:focus { color: #fff; }
+        .search-btn {
+            background: var(--gold); border: none;
+            color: #2A0F00; padding: 4px 12px; border-radius: 15px;
+            font-size: 11px; font-weight: 700; cursor: pointer;
+            transition: all 0.3s; font-family: inherit;
+        }
+        .search-btn:hover { background: var(--gold-light); box-shadow: 0 0 10px rgba(184,134,11,0.5); }
+
+        .map-wrap { position: fixed; top: 64px; left: 0; right: 0; bottom: 0; z-index: 1; }
+        #map { width: 100%; height: 100%; }
+        
+        /* 地图光晕边框 */
+        .map-glow {
+            position: absolute; inset: 0; pointer-events: none; z-index: 2;
+            box-shadow: inset 0 0 100px rgba(123,45,0,0.15), inset 0 0 200px rgba(184,134,11,0.08);
+            border: 1px solid rgba(196,160,110,0.1);
+        }
+        .map-loading {
+            position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+            font-size: 15px; color: var(--primary); background: var(--bg); z-index: 10;
+            flex-direction: column; gap: 12px;
+        }
+        .map-loading .spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        /* 加载古纹装饰 */
+        .loading-decor {
+            position: absolute; width: 120px; height: 120px;
+            animation: decorSpin 20s linear infinite;
+        }
+        .loading-decor::before, .loading-decor::after {
+            content: '';
+            position: absolute; inset: 0;
+            border: 2px solid transparent;
+            border-radius: 50%;
+        }
+        .loading-decor::before {
+            border-color: rgba(184,134,11,0.2);
+            animation: decorSpinReverse 10s linear infinite;
+        }
+        .loading-decor::after {
+            border-color: rgba(184,134,11,0.1);
+            animation: decorSpin 15s linear infinite;
+        }
+        @keyframes decorSpin { to { transform: rotate(360deg); } }
+        @keyframes decorSpinReverse { to { transform: rotate(-360deg); } }
+
+        .city-card {
+            position: fixed; z-index: 150;
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 14px 16px;
+            box-shadow: var(--shadow); min-width: 180px; max-width: 220px;
+            display: none; font-size: 12px; max-height: 300px; overflow-y: auto;
+            animation: cardSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        @keyframes cardSlideIn {
+            from { opacity: 0; transform: scale(0.9) translateY(-10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .city-card.show { display: block; }
+        .city-card-title { font-size: 14px; font-weight: 700; color: var(--primary-dark); margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 6px; letter-spacing: 1px; }
+        .city-card-ruin {
+            padding: 5px 6px; cursor: pointer; color: var(--text-muted);
+            transition: all 0.2s; border-radius: 6px; display: flex; align-items: center; gap: 7px; margin: 2px 0;
+        }
+        .city-card-ruin:hover { background: var(--bg-dark); color: var(--primary); transform: translateX(4px); }
+        .city-card-ruin-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; animation: dotGlow 2s ease-in-out infinite; }
+        @keyframes dotGlow {
+            0%, 100% { box-shadow: 0 0 4px currentColor; }
+            50% { box-shadow: 0 0 8px currentColor; }
+        }
+        .city-card-ruin-name { flex: 1; font-size: 12px; }
+        .city-card-ruin-dyna { font-size: 10px; color: var(--text-muted); }
+        .city-card-close { position: absolute; top: 8px; right: 10px; font-size: 13px; color: var(--text-muted); cursor: pointer; transition: all 0.2s; }
+        .city-card-close:hover { color: var(--primary); transform: scale(1.2); }
+
+        .legend-box {
+            position: fixed; bottom: 20px; left: 20px; z-index: 100;
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 14px 18px; box-shadow: var(--shadow);
+            backdrop-filter: blur(10px);
+        }
+        .legend-title { font-size: 10px; font-weight: 700; letter-spacing: 2px; color: var(--gold); margin-bottom: 10px; text-transform: uppercase; }
+        .legend-item { display: flex; align-items: center; gap: 8px; margin: 5px 0; font-size: 12px; color: var(--text-muted); }
+        .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; animation: dotGlow 2s ease-in-out infinite; }
+        .legend-line { width: 22px; height: 1.5px; border-radius: 1px; }
+
+        .stats-box {
+            position: fixed; bottom: 20px; right: 20px; z-index: 100;
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 14px 18px; box-shadow: var(--shadow); min-width: 170px;
+            backdrop-filter: blur(10px);
+        }
+        .stats-title { font-size: 10px; font-weight: 700; letter-spacing: 2px; color: var(--gold); margin-bottom: 10px; text-transform: uppercase; }
+        .stats-row { display: flex; justify-content: space-between; margin: 4px 0; font-size: 12px; }
+        .stats-label { color: var(--text-muted); }
+        .stats-val { font-weight: 700; color: var(--primary); }
+
+        /* ===== 详情弹窗增强 ===== */
+        .detail-overlay {
+            position: fixed; inset: 0; z-index: 300;
+            background: rgba(20,5,0,0.65);
+            display: none; align-items: center; justify-content: center;
+            backdrop-filter: blur(6px);
+        }
+        .detail-overlay.show { display: flex; }
+        .detail-card {
+            background: var(--card-bg); border: 2px solid var(--gold);
+            border-radius: var(--radius); width: 680px; max-height: 88vh;
+            overflow: hidden; display: flex; flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 40px rgba(184,134,11,0.15);
+            animation: card-in 0.4s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        @keyframes card-in {
+            from { opacity: 0; transform: scale(0.88) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .detail-img-wrap { position: relative; flex-shrink: 0; overflow: hidden; }
+        .detail-img { width: 100%; height: 280px; object-fit: cover; display: block; transition: transform 0.5s; background: linear-gradient(135deg, #E8D5B7, #D4C49A); }
+        .detail-card:hover .detail-img { transform: scale(1.03); }
+        
+        /* 图片占位符和加载状态 */
+        .detail-img-placeholder {
+            width: 100%; height: 280px;
+            display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(135deg, #2A0F00 0%, #4A1800 50%, #2A0F00 100%);
+            color: var(--gold); font-size: 64px; flex-direction: column; gap: 12px;
+        }
+        .detail-img-placeholder span { font-size: 12px; color: rgba(232,192,104,0.6); letter-spacing: 2px; }
+        
+        /* 历史底蕴标题装饰 */
+        .title-flourish {
+            display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+        }
+        .title-flourish::before, .title-flourish::after {
+            content: ''; flex: 1; height: 1px;
+            background: linear-gradient(90deg, transparent, var(--gold), transparent);
+        }
+        .title-flourish-icon { color: var(--gold); font-size: 14px; }
+        .detail-img-overlay {
+            position: absolute; inset: 0;
+            background: linear-gradient(to bottom, rgba(30,10,0,0.15) 0%, rgba(30,10,0,0.65) 100%);
+        }
+        .detail-badge {
+            position: absolute; top: 14px; right: 14px;
+            padding: 5px 14px; border-radius: 20px;
+            font-size: 11px; font-weight: 700; letter-spacing: 1px; z-index: 2;
+        }
+        .detail-badge.wh { background: #8B0000; color: #fff; animation: glow-red 2s ease-in-out infinite; }
+        .detail-badge.normal { background: var(--gold); color: #2A0F00; }
+        @keyframes glow-red { 0%,100%{box-shadow:0 0 8px rgba(139,0,0,0.5)} 50%{box-shadow:0 0 18px rgba(139,0,0,1)} }
+        .detail-city-tag {
+            position: absolute; bottom: 14px; left: 14px;
+            background: rgba(30,10,0,0.7); color: var(--gold-light);
+            padding: 4px 12px; border-radius: 20px; font-size: 12px;
+            border: 1px solid rgba(184,134,11,0.4);
+            backdrop-filter: blur(4px);
+        }
+        .detail-close {
+            position: absolute; top: 14px; left: 14px; z-index: 2;
+            width: 34px; height: 34px; border-radius: 50%;
+            background: rgba(30,10,0,0.6); color: #fff;
+            border: 1px solid rgba(255,255,255,0.25);
+            font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: all 0.3s; backdrop-filter: blur(4px);
+        }
+        .detail-close:hover { background: rgba(30,10,0,0.9); transform: scale(1.1) rotate(90deg); }
+
+        .detail-body { flex: 1; overflow-y: auto; padding: 20px 24px; }
+        .detail-title { font-size: 22px; font-weight: 700; color: var(--primary-dark); letter-spacing: 3px; margin-bottom: 10px; border-bottom: 2px solid var(--gold); padding-bottom: 10px; line-height: 1.4; animation: titleGlow 3s ease-in-out infinite; }
+        @keyframes titleGlow {
+            0%, 100% { text-shadow: 0 0 0 transparent; }
+            50% { text-shadow: 0 0 8px rgba(184,134,11,0.3); }
+        }
+
+        .detail-meta { display: flex; flex-wrap: wrap; gap: 7px; margin: 12px 0; }
+        .meta-pill { padding: 4px 12px; border-radius: 20px; font-size: 12px; border: 1px solid var(--border); background: var(--bg-dark); color: var(--text-muted); transition: all 0.2s; }
+        .meta-pill:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
+        .meta-pill.highlight { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+        .detail-section { margin: 14px 0; }
+        .detail-section-title { font-size: 10px; font-weight: 700; letter-spacing: 2px; color: var(--gold); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; text-transform: uppercase; }
+        .detail-section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+        .detail-desc-box { background: var(--bg-dark); border-radius: 10px; padding: 14px 16px; border-left: 3px solid var(--gold); font-size: 14px; line-height: 1.9; color: var(--text-muted); }
+        .detail-value-box { background: #FFF8F0; border-radius: 10px; padding: 14px 16px; border-left: 3px solid var(--primary); font-size: 14px; line-height: 1.9; color: var(--text); }
+
+        .detail-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+        .detail-tag { padding: 3px 10px; border-radius: 12px; background: var(--bg-dark); color: var(--text-muted); font-size: 11px; border: 1px solid var(--border); transition: all 0.2s; }
+        .detail-tag:hover { background: var(--primary); color: #fff; }
+
+        .detail-related { margin-top: 14px; }
+        .detail-related-title { font-size: 10px; font-weight: 700; letter-spacing: 2px; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; }
+        .detail-related-list { display: flex; flex-wrap: wrap; gap: 7px; }
+        .related-chip { padding: 5px 12px; border-radius: 20px; background: var(--bg-dark); border: 1px solid var(--border); color: var(--text-muted); font-size: 12px; cursor: pointer; transition: all 0.3s; }
+        .related-chip:hover { background: var(--primary); color: #fff; border-color: var(--primary); transform: translateY(-2px); }
+
+        .detail-footer { padding: 14px 24px; border-top: 1px solid var(--border); display: flex; gap: 10px; flex-shrink: 0; }
+        .detail-footer button { flex: 1; padding: 10px; border-radius: 20px; border: 1px solid var(--border); background: var(--bg-dark); color: var(--text); font-size: 13px; cursor: pointer; transition: all 0.3s; font-family: inherit; }
+        .detail-footer button:hover { background: var(--primary); color: #fff; border-color: var(--primary); transform: translateY(-2px); }
+        .detail-footer button.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+        .detail-footer button.primary:hover { background: var(--primary-dark); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(123,45,0,0.3); }
+    </style>
+</head>
+<body>
+
+<!-- 沉浸式动态背景层 -->
+<div class="immersive-bg">
+    <div class="cloud-pattern"></div>
+    <div class="particles"></div>
+</div>
+
+<div class="top-bar">
+    <div class="brand">
+        <div class="brand-icon">🏛️</div>
+        <div class="brand-text">
+            <h1>中华古址智鉴</h1>
+            <span>华夏五千年 · 遗址分布图</span>
+        </div>
+    </div>
+    <div class="top-center" id="dynastyFilters">
+        <button class="dyna-btn active" onclick="filterAll()" title="查看全部遗址">全部</button>
+    </div>
+    <div class="top-right">
+        <div class="search-box">
+            <input type="text" id="mapSearchInput" class="search-field" placeholder="🔍 搜索遗址..." onkeydown="if(event.key==='Enter')searchMap()">
+            <button class="search-btn" onclick="searchMap()">搜索</button>
+        </div>
+        <div class="stat-bar" id="statBar">共加载 0 处遗址</div>
+        <a href="/" class="back-link">返回首页</a>
+    </div>
+</div>
+
+<div class="map-wrap">
+    <div id="map"></div>
+    <div class="map-glow"></div>
+    <div class="map-loading" id="mapLoading">
+        <div class="spinner"></div>
+        <span>地图加载中...</span>
+    </div>
+</div>
+
+<div class="city-card" id="cityCard">
+    <div class="city-card-close" onclick="hideCityCard()">&#10005;</div>
+    <div class="city-card-title" id="cityCardTitle">城市名</div>
+    <div id="cityCardList"></div>
+</div>
+
+<div class="legend-box">
+    <div class="legend-title">✦ 图例 ✦</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#8B0000;box-shadow:0 0 6px #8B0000;"></div>🌍 世界文化遗产</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#C4622D;box-shadow:0 0 6px rgba(196,98,45,0.6);"></div>🏛️ 全国重点文物保护单位</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#B8860B;box-shadow:0 0 6px rgba(184,134,11,0.6);"></div>📜 省级保护单位</div>
+    <div class="legend-item"><div class="legend-line" style="background:linear-gradient(90deg,#8B0000,#B8860B);border-style:dashed;border-width:1.5px;border-color:#B8860B;"></div>遗址-城市连接线</div>
+    <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);font-size:10px;color:var(--text-muted);line-height:1.6">
+        <div style="color:var(--gold);font-weight:700;margin-bottom:4px;">📖 朝代色谱</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;">
+            <span style="background:#8B4513;color:#fff;padding:2px 6px;border-radius:3px;font-size:10px;">史前</span>
+            <span style="background:#7B3F00;color:#fff;padding:2px 6px;border-radius:3px;font-size:10px;">夏商</span>
+            <span style="background:#8B6914;color:#fff;padding:2px 6px;border-radius:3px;font-size:10px;">周</span>
+            <span style="background:#1A1A1A;color:#fff;padding:2px 6px;border-radius:3px;font-size:10px;">秦</span>
+            <span style="background:#8B0000;color:#fff;padding:2px 6px;border-radius:3px;font-size:10px;">唐</span>
+            <span style="background:#2E8B57;color:#fff;padding:2px 6px;border-radius:3px;font-size:10px;">宋</span>
+            <span style="background:#FFD700;color:#333;padding:2px 6px;border-radius:3px;font-size:10px;">明</span>
+        </div>
+    </div>
+</div>
+
+<div class="stats-box">
+    <div class="stats-title">✦ 当前统计 ✦</div>
+    <div class="stats-row"><span class="stats-label">📍 显示遗址</span><span class="stats-val" id="sCount">-</span></div>
+    <div class="stats-row"><span class="stats-label">🏙️ 涉及城市</span><span class="stats-val" id="sCity">-</span></div>
+    <div class="stats-row"><span class="stats-label">🌍 世界遗产</span><span class="stats-val" id="sHeritage">-</span></div>
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);">
+        <div style="font-size:10px;color:var(--text-muted);line-height:1.6">
+            <div style="color:var(--gold);font-weight:700;margin-bottom:4px;">💡 操作提示</div>
+            <div>• 点击城市查看遗址</div>
+            <div>• 点击标记查看详情</div>
+            <div>• 滚动缩放地图</div>
+        </div>
+    </div>
+</div>
+
+<div class="detail-overlay" id="detailOverlay">
+    <div class="detail-card">
+        <div class="detail-img-wrap">
+            <img class="detail-img" id="dImg" src="" alt="" style="display:none;" onerror="handleImgError(this)">
+            <div class="detail-img-placeholder" id="dImgPlaceholder">
+                <div>🏛️</div>
+                <span>遗迹风貌</span>
+            </div>
+            <div class="detail-img-overlay"></div>
+            <div class="detail-badge normal" id="dBadge">全国重点文物保护单位</div>
+            <div class="detail-city-tag" id="dCityTag">城市</div>
+            <button class="detail-close" onclick="hideDetail()">✕</button>
+        </div>
+        <div class="detail-body">
+            <div class="title-flourish">
+                <span class="title-flourish-icon">✦</span>
+                <span style="font-size:10px;color:var(--gold);letter-spacing:3px;font-weight:700;">中华古址智鉴</span>
+                <span class="title-flourish-icon">✦</span>
+            </div>
+            <div class="detail-title" id="dTitle">遗址名称</div>
+            <div class="detail-meta" id="dMeta"></div>
+            <div class="detail-section">
+                <div class="detail-section-title">遗址概述</div>
+                <div class="detail-desc-box" id="dDesc"></div>
+            </div>
+            <div class="detail-section">
+                <div class="detail-section-title">历史价值</div>
+                <div class="detail-value-box" id="dValue"></div>
+            </div>
+            <div class="detail-section">
+                <div class="detail-section-title">相关标签</div>
+                <div class="detail-tags" id="dTags"></div>
+            </div>
+            <div class="detail-related" id="dRelatedSection" style="display:none;">
+                <div class="detail-related-title">同城市其他遗址</div>
+                <div class="detail-related-list" id="dRelatedList"></div>
+            </div>
+        </div>
+        <div class="detail-footer">
+            <button onclick="hideDetail()">关闭</button>
+            <button class="primary" onclick="flyToCity()">定位到所在城市</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const API = 'http://127.0.0.1:8080/api';
+let allRuins = [];
+let filteredRuins = [];
+let currentDynasty = '全部';
+let currentCity = '';
+let chart = null;
+let targetCity = null; // URL参数传入的目标城市
+
+const DYNASTY_COLOR = {
+    '史前':'#8B4513','夏':'#7B3F00','商':'#6B3300','周':'#8B6914',
+    '春秋':'#9B7B2E','战国':'#A0522D','秦':'#1A1A1A','汉':'#B8860B',
+    '三国':'#CD853F','六朝':'#D2691E','南北朝':'#DAA520','隋':'#B8860B',
+    '唐':'#8B0000','五代':'#A52A2A','宋':'#2E8B57','辽':'#4682B4',
+    '金':'#708090','元':'#1E90FF','明':'#FFD700','清':'#DC143C',
+    '多朝':'#9370DB','汉魏':'#B8860B','北魏':'#CD853F','其他':'#808080'
+};
+
+chart = echarts.init(document.getElementById('map'));
+window.addEventListener('resize', () => chart.resize());
+
+function loadMap() {
+    document.getElementById('mapLoading').style.display = 'flex';
+    const tryLoad = (url) => fetch(url).then(r => r.json()).then(geo => {
+        echarts.registerMap('china', geo);
+        document.getElementById('mapLoading').style.display = 'none';
+        loadData();
+    }).catch(() => null);
+    tryLoad('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json')
+        .then(() => tryLoad('https://geo.datav.aliyun.com/areas_v3/bound/100000.json'))
+        .catch(() => { document.getElementById('mapLoading').innerHTML = '<span>地图加载失败，请检查网络后刷新</span>'; });
+}
+
+async function loadData() {
+    try {
+        const res = await fetch(API + '/map3d');
+        const data = await res.json();
+        allRuins = data.ruins;
+        filteredRuins = allRuins;
+        buildDynastyFilters();
+        renderMap();
+        updateStats();
+        // URL参数：自动定位到指定城市
+        const params = new URLSearchParams(window.location.search);
+        targetCity = params.get('city');
+        if (targetCity) {
+            setTimeout(() => {
+                const r = allRuins.find(x => x.city === targetCity);
+                if (r) {
+                    chart.setOption({ geo: { center: r.coords, zoom: 4 } });
+                    showCityCard(targetCity, r.coords);
+                }
+            }, 800);
+        }
+    } catch(e) {
+        document.getElementById('mapLoading').innerHTML = '<span>后端未启动，请先运行 main.py</span>';
+    }
+}
+
+// 全部按钮筛选
+function filterAll() {
+    document.querySelectorAll('.dyna-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('.dyna-btn').classList.add('active');
+    currentDynasty = '全部';
+    filteredRuins = allRuins;
+    renderMap();
+    updateStats();
+    hideCityCard();
+}
+
+// 搜索功能
+function searchMap() {
+    const kw = document.getElementById('mapSearchInput').value.trim().toLowerCase();
+    if (!kw) { filterAll(); return; }
+    filteredRuins = allRuins.filter(r => 
+        r.name.toLowerCase().includes(kw) ||
+        r.city.toLowerCase().includes(kw) ||
+        r.dynasty.toLowerCase().includes(kw) ||
+        r.type.toLowerCase().includes(kw) ||
+        r.age.toLowerCase().includes(kw) ||
+        r.desc.toLowerCase().includes(kw)
+    );
+    document.querySelectorAll('.dyna-btn').forEach(b => b.classList.remove('active'));
+    renderMap();
+    updateStats();
+    if (filteredRuins.length === 0) {
+        alert('未找到匹配的遗址，试试其他关键词');
+    }
+}
+
+// 图片错误处理
+function handleImgError(img) {
+    img.style.display = 'none';
+    const placeholder = document.getElementById('dImgPlaceholder');
+    if (placeholder) placeholder.style.display = 'flex';
+}
+
+function buildDynastyFilters() {
+    const container = document.getElementById('dynastyFilters');
+    container.innerHTML = '';
+    ['全部','史前','夏','商','周','春秋','战国','秦','汉','三国','六朝','南北朝','隋','唐','五代','宋','辽','金','元','明','清'].forEach(d => {
+        if (d === '全部' || allRuins.some(r => r.dynasty === d || r.era === d)) {
+            const btn = document.createElement('button');
+            btn.className = 'dyna-btn' + (d === '全部' ? ' active' : '');
+            btn.textContent = d;
+            btn.onclick = () => {
+                document.querySelectorAll('.dyna-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentDynasty = d;
+                filteredRuins = d === '全部' ? allRuins : allRuins.filter(r => r.dynasty === d || r.era === d);
+                renderMap();
+                updateStats();
+                hideCityCard();
+            };
+            container.appendChild(btn);
+        }
+    });
+}
+
+function renderMap() {
+    const cityGroups = {};
+    filteredRuins.forEach(r => {
+        if (!cityGroups[r.city]) cityGroups[r.city] = [];
+        cityGroups[r.city].push(r);
+    });
+
+    // 散点 - 增强分散效果
+    const scatterData = [];
+    filteredRuins.forEach((r, i) => {
+        const coords = r.coords;
+        const sameCity = cityGroups[r.city];
+        const idx = sameCity.indexOf(r);
+        const total = sameCity.length;
+        // 增强分散半径，每个城市内点均匀分布在更大的圆周上
+        const angle = total > 1 ? (idx / total) * Math.PI * 2 - Math.PI / 2 : 0;
+        const radius = total > 1 ? 0.5 : 0; // 增大分散半径
+        const jx = Math.cos(angle) * radius;
+        const jy = Math.sin(angle) * radius;
+        const isWH = r.status.includes('世界文化遗产');
+        const color = isWH ? '#8B0000' : (DYNASTY_COLOR[r.dynasty] || '#C4622D');
+        // 增大点尺寸，世界遗产更大更醒目
+        const baseSize = isWH ? 20 : 14;
+        const extraSize = total > 1 ? 3 : 0;
+        scatterData.push({
+            name: r.name, value: [coords[0] + jx, coords[1] + jy],
+            itemStyle: {
+                color,
+                shadowBlur: isWH ? 28 : 18,
+                shadowColor: isWH ? 'rgba(139,0,0,1)' : color + '99',
+                borderColor: isWH ? '#FFD700' : '#FFF8E0',
+                borderWidth: isWH ? 2 : 1,
+            },
+            symbolSize: baseSize + extraSize,
+            ruinsData: r,
+        });
+    });
+
+    // 城市中心 - 更醒目的标签
+    const cityCenterData = Object.keys(cityGroups).map(city => {
+        const first = cityGroups[city][0];
+        const cnt = cityGroups[city].length;
+        return {
+            name: city, value: first.coords,
+            label: {
+                show: true,
+                formatter: () => '【' + city + '】' + (cnt > 1 ? ' ×' + cnt : ''),
+                fontSize: 13, fontWeight: 700, color: '#1A0A00',
+                backgroundColor: 'rgba(245,237,224,0.95)',
+                borderRadius: 6, padding: [4, 8], borderWidth: 2, borderColor: '#B8860B',
+            },
+            itemStyle: {
+                color: 'transparent',
+                borderColor: '#B8860B',
+                borderWidth: 0,
+                shadowBlur: 0,
+            }
+        };
+    });
+
+    // 连接线：城市中心 → 每个遗址（虚线）
+    const lineSeriesData = [];
+    Object.values(cityGroups).forEach(ruins => {
+        const center = ruins[0].coords;
+        ruins.forEach(r => {
+            const isWH = r.status.includes('世界文化遗产');
+            lineSeriesData.push({
+                coords: [center, [r.coords[0] + (ruins.length > 1 ? (Math.cos((ruins.indexOf(r) / ruins.length) * Math.PI * 2 - Math.PI / 2) * 0.5) : 0), r.coords[1] + (ruins.length > 1 ? Math.sin((ruins.indexOf(r) / ruins.length) * Math.PI * 2 - Math.PI / 2) * 0.5 : 0)]],
+                lineStyle: {
+                    color: isWH ? '#8B0000' : '#C4A06E',
+                    width: isWH ? 2.5 : 1.5, opacity: 0.5,
+                    type: 'dashed', curveness: 0.15,
+                }
+            });
+        });
+    });
+
+    const option = {
+        backgroundColor: 'transparent',
+        title: {
+            text: currentDynasty === '全部' ? '✦ 中华古址 · 全国遗址分布 ✦' : '✦ ' + currentDynasty + '代遗址分布 ✦',
+            subtext: '共 ' + filteredRuins.length + ' 处遗址  ·  ' + Object.keys(cityGroups).length + ' 个城市  ·  探寻华夏文明千年脉络',
+            left: 'center', top: 10,
+            textStyle: { fontSize: 18, fontWeight: 700, color: '#5C1E00', fontFamily: 'serif', letterSpacing: 3 },
+            subtextStyle: { fontSize: 12, color: '#7A5C3E', fontStyle: 'italic' }
+        },
+        tooltip: {
+            trigger: 'item',
+            backgroundColor: 'rgba(45,20,0,0.95)', borderColor: '#B8860B', borderWidth: 1.5,
+            borderRadius: 12, padding: [14, 18], textStyle: { color: '#F9F4EC', fontSize: 13 },
+            extraCssText: 'box-shadow: 0 8px 24px rgba(0,0,0,0.4), 0 0 20px rgba(184,134,11,0.15);',
+            formatter: function(p) {
+                if (p.data && p.data.ruinsData) {
+                    const r = p.data.ruinsData;
+                    return '<div style="font-weight:700;font-size:14px;margin-bottom:4px;">' + r.name + '</div>' +
+                        '<div style="font-size:11px;color:#E8C068;">' + r.dynasty + ' · ' + r.city + '</div>' +
+                        '<div style="font-size:11px;margin-top:4px;">' + r.type + ' · ' + r.age + '</div>' +
+                        '<div style="font-size:11px;margin-top:2px;color:#FFD700;">' + r.status + '</div>';
+                }
+                if (p.data && p.data.name && !p.data.ruinsData) {
+                    return '<div style="font-weight:700;">' + p.data.name + '</div><div style="font-size:11px;color:#E8C068;">城市中心点（点击查看全部遗址）</div>';
+                }
+                return '';
+            }
+        },
+        geo: {
+            map: 'china', roam: true, zoom: 1.2, center: [105, 36],
+            scaleLimit: { min: 0.8, max: 8 },
+            itemStyle: { 
+                areaColor: {
+                    type: 'linear',
+                    x: 0, y: 1, x2: 0, y2: 0,
+                    colorStops: [
+                        { offset: 0, color: '#DBC5A0' },
+                        { offset: 0.5, color: '#E8D5B7' },
+                        { offset: 1, color: '#D4C49A' }
+                    ]
+                }, 
+                borderColor: '#C4A06E', 
+                borderWidth: 1.5, 
+                shadowBlur: 20, 
+                shadowColor: 'rgba(123,45,0,0.25)' 
+            },
+            emphasis: { 
+                itemStyle: { 
+                    areaColor: '#DBC5A0', 
+                    borderColor: '#B8860B', 
+                    borderWidth: 2.5,
+                    shadowBlur: 15,
+                    shadowColor: 'rgba(184,134,11,0.4)'
+                }, 
+                label: { show: true } 
+            },
+            label: { show: false },
+        },
+        series: [
+            { type: 'scatter', coordinateSystem: 'geo', data: cityCenterData, symbol: 'circle', symbolSize: 0, label: { show: true }, silent: true, z: 5 },
+            { type: 'lines', coordinateSystem: 'geo', data: lineSeriesData, large: false, polyline: false, z: 3 },
+            {
+                type: 'effectScatter', coordinateSystem: 'geo',
+                data: scatterData, symbolSize: (v, p) => p.data.symbolSize,
+                showEffectOn: 'emphasis',
+                rippleEffect: { brushType: 'stroke', scale: 3.5, period: 4 },
+                label: { show: false, position: 'right', formatter: '{b}', fontSize: 11, color: '#3D1A00' },
+                emphasis: { scale: 1.6, label: { show: true } },
+                z: 10,
+            }
+        ]
+    };
+
+    chart.setOption(option, true);
+    chart.off('click');
+    chart.on('click', function(params) {
+        if (params.componentType === 'geo') return;
+        if (params.data && params.data.ruinsData) {
+            showDetail(params.data.ruinsData);
+        } else if (params.data && params.data.name && !params.data.ruinsData) {
+            showCityCard(params.data.name, params.data.value);
+        }
+    });
+    chart.on('roam', () => hideCityCard());
+}
+
+function showCityCard(city, coords) {
+    const ruins = filteredRuins.filter(r => r.city === city);
+    if (!ruins.length) return;
+    const card = document.getElementById('cityCard');
+    document.getElementById('cityCardTitle').textContent = city;
+    document.getElementById('cityCardList').innerHTML = ruins.map(r => {
+        const color = r.status.includes('世界文化遗产') ? '#8B0000' : (DYNASTY_COLOR[r.dynasty] || '#C4622D');
+        const imgHtml = r.image ? `<img src="${r.image}" style="width:50px;height:50px;border-radius:8px;object-fit:cover;margin-right:10px;flex-shrink:0;" onerror="this.style.display='none'">` : '';
+        return '<div class="city-card-ruin" onclick="showDetail(findRuin(\'' + r.name + '\',\'' + r.city + '\'))">' +
+            imgHtml +
+            '<div style="flex:1;min-width:0;">' +
+            '<div class="city-card-ruin-dot" style="background:' + color + ';display:inline-block;margin-right:5px;"></div>' +
+            '<span class="city-card-ruin-name">' + r.name + '</span>' +
+            '<div class="city-card-ruin-dyna">' + r.dynasty + '</div></div></div>';
+    }).join('');
+    // 计算位置
+    const px = (coords[0] + 180) / 360 * window.innerWidth;
+    const py = (90 - coords[1] + 10) / 180 * (window.innerHeight - 64);
+    const left = Math.min(Math.max(px - 100, 10), window.innerWidth - 230);
+    const top = Math.min(Math.max(py, 70), window.innerHeight - 350);
+    card.style.left = left + 'px';
+    card.style.top = top + 'px';
+    card.classList.add('show');
+}
+
+function findRuin(name, city) {
+    return allRuins.find(r => r.name === name && r.city === city);
+}
+
+function hideCityCard() { document.getElementById('cityCard').classList.remove('show'); }
+
+function updateStats() {
+    const cities = new Set(filteredRuins.map(r => r.city));
+    const heritage = filteredRuins.filter(r => r.status.includes('世界文化遗产')).length;
+    document.getElementById('sCount').textContent = filteredRuins.length + ' 处';
+    document.getElementById('sCity').textContent = cities.size + ' 个';
+    document.getElementById('sHeritage').textContent = heritage + ' 处';
+    document.getElementById('statBar').textContent = '✦ 共 ' + allRuins.length + ' 处遗址 ✦';
+}
+
+function showDetail(r) {
+    if (!r) return;
+    hideCityCard();
+    
+    // 处理图片显示
+    const img = document.getElementById('dImg');
+    const placeholder = document.getElementById('dImgPlaceholder');
+    if (r.image) {
+        img.onload = function() {
+            img.style.display = 'block';
+            if (placeholder) placeholder.style.display = 'none';
+        };
+        img.onerror = function() {
+            handleImgError(img);
+        };
+        img.src = r.image;
+    } else {
+        img.style.display = 'none';
+        if (placeholder) placeholder.style.display = 'flex';
+    }
+    
+    document.getElementById('dTitle').textContent = r.name;
+    const badge = document.getElementById('dBadge');
+    if (r.status.includes('世界文化遗产')) {
+        badge.textContent = '🌍 世界文化遗产'; badge.className = 'detail-badge wh';
+    } else {
+        badge.textContent = '📜 全国重点文物保护单位'; badge.className = 'detail-badge normal';
+    }
+    document.getElementById('dCityTag').textContent = '📍 ' + r.city;
+    document.getElementById('dMeta').innerHTML =
+        '<span class="meta-pill highlight">🏯 ' + r.dynasty + ' · ' + r.era + '</span>' +
+        '<span class="meta-pill">📆 ' + r.age + '</span>' +
+        '<span class="meta-pill">🏛️ ' + r.type + '</span>';
+    document.getElementById('dDesc').textContent = r.desc;
+    document.getElementById('dValue').textContent = r.value;
+    document.getElementById('dTags').innerHTML = (r.tags || []).map(t => '<span class="detail-tag">✦ ' + t + '</span>').join('');
+    const related = allRuins.filter(x => x.city === r.city && x.name !== r.name);
+    const relSec = document.getElementById('dRelatedSection');
+    if (related.length) {
+        relSec.style.display = 'block';
+        document.getElementById('dRelatedList').innerHTML = related.map(rr =>
+            '<span class="related-chip" onclick="showDetail(findRuin(\'' + rr.name + '\',\'' + rr.city + '\'))">🏛️ ' + rr.name + '</span>'
+        ).join('');
+    } else { relSec.style.display = 'none'; }
+    currentCity = r.city;
+    document.getElementById('detailOverlay').classList.add('show');
+}
+
+function hideDetail() { document.getElementById('detailOverlay').classList.remove('show'); }
+
+function flyToCity() {
+    hideDetail();
+    const r = allRuins.find(x => x.city === currentCity);
+    if (r) {
+        chart.dispatchAction({ type: 'geoRoam', zoom: 4, center: r.coords });
+    }
+}
+
+document.getElementById('detailOverlay').onclick = function(e) { if (e.target === this) hideDetail(); };
+
+loadMap();
+</script>
+</body>
+</html>
