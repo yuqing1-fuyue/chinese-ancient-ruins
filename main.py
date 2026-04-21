@@ -1040,6 +1040,18 @@ def root():
 def map3d():
     return FileResponse(os.path.join(BASE_DIR, "map3d.html"))
 
+STATIC_DIR = os.path.join(BASE_DIR, "static")
+
+@app.get("/static/{filename}")
+def serve_static(filename: str):
+    """提供静态文件服务（地图GeoJSON等）"""
+    import mimetypes
+    filepath = os.path.join(STATIC_DIR, filename)
+    if not os.path.exists(filepath):
+        return JSONResponse(status_code=404, content={"error": "文件不存在"})
+    mime, _ = mimetypes.guess_type(filepath)
+    return FileResponse(filepath, media_type=mime or "application/json")
+
 # 图片静态文件服务
 @app.get("/images/{filename}")
 def serve_image(filename: str):

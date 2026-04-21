@@ -487,9 +487,9 @@ window.addEventListener('resize', () => chart.resize());
 function loadMap() {
     document.getElementById('mapLoading').style.display = 'flex';
     const geoUrls = [
+        '/static/china.json',
         'https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json',
-        'https://geo.datav.aliyun.com/areas_v3/bound/100000.json',
-        'https://echarts.apache.org/examples/data/asset/geo/china.json'
+        'https://geo.datav.aliyun.com/areas_v3/bound/100000.json'
     ];
     const tryLoad = (url, timeout = 10000) => {
         const controller = new AbortController();
